@@ -30,14 +30,6 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
                 return new Connection(null, $database, $prefix, $config);
             });
         });
-
-        // Add connector for queue support.
-        $this->app->resolving('queue', function ($queue) {
-            $queue->addConnector('presto', function () {
-                //todo
-                return new MongoConnector($this->app['db']);
-            });
-        });
     }
 
 }

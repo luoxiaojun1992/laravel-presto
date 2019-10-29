@@ -29,7 +29,7 @@ class Connection extends \Illuminate\Database\Connection
             }
 
             $clientSession = (new HttpConnector())->connect($this->config);
-            
+
             $prepareName = 'my_select';
 
             $this->prepareQuery($clientSession, $query, $prepareName, $useReadPdo);
@@ -58,13 +58,107 @@ class Connection extends \Illuminate\Database\Connection
         });
     }
 
-    protected function prepareQuery(ClientSession $clientSession, $query, $prepareName, $useReadPdo = true)
+    /**
+     * Run an SQL statement and get the number of rows affected.
+     *
+     * @param  string  $query
+     * @param  array   $bindings
+     * @return int
+     */
+    public function affectingStatement($query, $bindings = [])
+    {
+        return $this->run($query, $bindings, function ($query, $bindings) {
+            if ($this->pretending()) {
+                return 0;
+            }
+
+            $clientSession = (new HttpConnector())->connect($this->config);
+
+            $prepareName = 'my_statement';
+
+            $this->prepareQuery($clientSession, $query, $prepareName);
+
+            $executeQuery = 'EXECUTE ' . $prepareName;
+            if (count($bindings) > 0) {
+                $executeQuery .= (' USING ' . implode(', ', $this->prepareBindings($bindings)));
+            }
+            $statement = $this->getStatement($clientSession, $executeQuery);
+
+            $this->afterPrepare($statement);
+
+            $queryResults = $this->getResultSession($statement)->execute()->yieldResults();
+            foreach ($queryResults as $queryResult) {
+                if ($queryResult instanceof QueryResult) {
+                    foreach ($queryResult->yieldData() as $row) {
+                        if ($row instanceof FixData) {
+                            if (isset($row['rows'])) {
+                                $this->recordsHaveBeenModified(
+                                    ($count = $row['rows']) > 0
+                                );
+
+                                return $count;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return 0;
+        });
+    }
+
+    /**
+     * Execute an SQL statement and return the boolean result.
+     *
+     * @param  string  $query
+     * @param  array   $bindings
+     * @return bool
+     */
+    public function statement($query, $bindings = [])
+    {
+        return $this->run($query, $bindings, function ($query, $bindings) {
+            if ($this->pretending()) {
+                return true;
+            }
+
+            $clientSession = (new HttpConnector())->connect($this->config);
+
+            $prepareName = 'my_statement';
+
+            $this->prepareQuery($clientSession, $query, $prepareName);
+
+            $executeQuery = 'EXECUTE ' . $prepareName;
+            if (count($bindings) > 0) {
+                $executeQuery .= (' USING ' . implode(', ', $this->prepareBindings($bindings)));
+            }
+            $statement = $this->getStatement($clientSession, $executeQuery);
+
+            $this->afterPrepare($statement);
+
+            $queryResults = $this->getResultSession($statement)->execute()->yieldResults();
+            foreach ($queryResults as $queryResult) {
+                if ($queryResult instanceof QueryResult) {
+                    foreach ($queryResult->yieldData() as $row) {
+                        if ($row instanceof FixData) {
+                            if (isset($row['rows'])) {
+                                return $row['rows'] > 0;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return false;
+        });
+    }
+
+    protected function prepareQuery(ClientSession $clientSession, $query, $prepareName, $useReadPdo = false)
     {
         $preparedStatement = new PreparedStatement($prepareName, $query);
         $clientSession->setPreparedStatement($preparedStatement);
     }
 
-    protected function getStatement(ClientSession $clientSession, $query, $useReadPdo = true)
+    protected function getStatement(ClientSession $clientSession, $query, $useReadPdo = false)
     {
         return new StatementClient($clientSession, $query);
     }

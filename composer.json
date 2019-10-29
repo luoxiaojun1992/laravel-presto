@@ -1,0 +1,26 @@
+{
+    "name": "luoxiaojun/laravel-presto",
+    "description": "Presto driver for Laravel",
+    "type": "library",
+    "require": {
+        "ytake/php-presto-client": "^0.1.4"
+    },
+    "license": "apache-2.0",
+    "authors": [
+        {
+            "name": "luoxiaojun",
+            "email": "luoxiaojun1992@sina.cn"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {"Lxj\\Laravel\\Presto\\": "src/"}
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Lxj\\Laravel\\Presto\\ServiceProvider"
+            ]
+        }
+    }
+}
