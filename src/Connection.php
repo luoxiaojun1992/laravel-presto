@@ -30,15 +30,9 @@ class Connection extends \Illuminate\Database\Connection
 
             $clientSession = (new HttpConnector())->connect($this->config);
 
-            $prepareName = 'my_select';
+            $prepareName = 'prepared_statement';
 
-            $this->prepareQuery($clientSession, $query, $prepareName, $useReadPdo);
-
-            $executeQuery = 'EXECUTE ' . $prepareName;
-            if (count($bindings) > 0) {
-                $executeQuery .= (' USING ' . implode(', ', $this->prepareBindings($bindings)));
-            }
-            $statement = $this->getStatement($clientSession, $executeQuery, $useReadPdo);
+            $statement = $this->prepareQuery($clientSession, $query, $prepareName, $bindings, $useReadPdo);
 
             $this->afterPrepare($statement);
 
@@ -74,15 +68,9 @@ class Connection extends \Illuminate\Database\Connection
 
             $clientSession = (new HttpConnector())->connect($this->config);
 
-            $prepareName = 'my_statement';
+            $prepareName = 'prepared_statement';
 
-            $this->prepareQuery($clientSession, $query, $prepareName);
-
-            $executeQuery = 'EXECUTE ' . $prepareName;
-            if (count($bindings) > 0) {
-                $executeQuery .= (' USING ' . implode(', ', $this->prepareBindings($bindings)));
-            }
-            $statement = $this->getStatement($clientSession, $executeQuery);
+            $statement = $this->prepareQuery($clientSession, $query, $prepareName, $bindings);
 
             $this->afterPrepare($statement);
 
@@ -103,6 +91,8 @@ class Connection extends \Illuminate\Database\Connection
                 }
             }
 
+            $this->recordsHaveBeenModified(false);
+            
             return 0;
         });
     }
@@ -123,15 +113,9 @@ class Connection extends \Illuminate\Database\Connection
 
             $clientSession = (new HttpConnector())->connect($this->config);
 
-            $prepareName = 'my_statement';
+            $prepareName = 'prepared_statement';
 
-            $this->prepareQuery($clientSession, $query, $prepareName);
-
-            $executeQuery = 'EXECUTE ' . $prepareName;
-            if (count($bindings) > 0) {
-                $executeQuery .= (' USING ' . implode(', ', $this->prepareBindings($bindings)));
-            }
-            $statement = $this->getStatement($clientSession, $executeQuery);
+            $statement = $this->prepareQuery($clientSession, $query, $prepareName, $bindings);
 
             $this->afterPrepare($statement);
 
@@ -141,21 +125,80 @@ class Connection extends \Illuminate\Database\Connection
                     foreach ($queryResult->yieldData() as $row) {
                         if ($row instanceof FixData) {
                             if (isset($row['rows'])) {
-                                return $row['rows'] > 0;
+                                $this->recordsHaveBeenModified(
+                                    ($count = $row['rows']) > 0
+                                );
+                                
+                                return $count > 0;
                             }
                         }
                     }
                 }
             }
 
+            $this->recordsHaveBeenModified(false);
+            
             return false;
         });
     }
 
-    protected function prepareQuery(ClientSession $clientSession, $query, $prepareName, $useReadPdo = false)
+    /**
+     * Run a raw, unprepared query against the PDO connection.
+     *
+     * @param  string  $query
+     * @return bool
+     */
+    public function unprepared($query)
     {
+        return $this->run($query, [], function ($query) {
+            if ($this->pretending()) {
+                return true;
+            }
+
+            $clientSession = (new HttpConnector())->connect($this->config);
+            
+            $statement = $this->getStatement($clientSession, $query);
+
+            $this->afterPrepare($statement);
+
+            $queryResults = $this->getResultSession($statement)->execute()->yieldResults();
+            foreach ($queryResults as $queryResult) {
+                if ($queryResult instanceof QueryResult) {
+                    foreach ($queryResult->yieldData() as $row) {
+                        if ($row instanceof FixData) {
+                            if (isset($row['rows'])) {
+                                $this->recordsHaveBeenModified(
+                                    ($count = $row['rows']) > 0
+                                );
+
+                                return $count > 0;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            $this->recordsHaveBeenModified(false);
+
+            return false;
+        });
+    }
+    
+    protected function prepareQuery(
+        ClientSession $clientSession,
+        $query,
+        $prepareName,
+        $bindings = [],
+        $useReadPdo = false
+    ) {
         $preparedStatement = new PreparedStatement($prepareName, $query);
         $clientSession->setPreparedStatement($preparedStatement);
+
+        $executeQuery = 'EXECUTE ' . $prepareName;
+        if (count($bindings) > 0) {
+            $executeQuery .= (' USING ' . implode(', ', $this->prepareBindings($bindings)));
+        }
+        return $this->getStatement($clientSession, $executeQuery);
     }
 
     protected function getStatement(ClientSession $clientSession, $query, $useReadPdo = false)
