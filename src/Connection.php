@@ -52,6 +52,35 @@ class Connection extends \Illuminate\Database\Connection
         });
     }
 
+    public function cursor($query, $bindings = [], $useReadPdo = true)
+    {
+        return $this->run($query, $bindings, function ($query, $bindings) use ($useReadPdo) {
+            if ($this->pretending()) {
+                return [];
+            }
+
+            $clientSession = (new HttpConnector())->connect($this->config);
+
+            $prepareName = 'prepared_statement';
+
+            $statement = $this->prepareQuery($clientSession, $query, $prepareName, $bindings, $useReadPdo);
+
+            $this->afterPrepare($statement);
+
+            $result = [];
+            $queryResults = $this->getResultSession($statement)->execute()->yieldResults();
+            foreach ($queryResults as $queryResult) {
+                if ($queryResult instanceof QueryResult) {
+                    foreach ($queryResult->yieldData() as $row) {
+                        if ($row instanceof FixData) {
+                            yield (array)$row;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     /**
      * Run an SQL statement and get the number of rows affected.
      *
@@ -211,13 +240,13 @@ class Connection extends \Illuminate\Database\Connection
     public function prepareBindings(array $bindings)
     {
         $bindings = parent::prepareBindings($bindings);
-        
+
         foreach ($bindings as $key => $value) {
             if (is_string($value)) {
                 $bindings[$key] = '\'' . $value . '\'';
             }
         }
-        
+
         return $bindings;
     }
 
