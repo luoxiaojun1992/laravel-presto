@@ -92,7 +92,7 @@ class Connection extends \Illuminate\Database\Connection
             }
 
             $this->recordsHaveBeenModified(false);
-            
+
             return 0;
         });
     }
@@ -128,7 +128,7 @@ class Connection extends \Illuminate\Database\Connection
                                 $this->recordsHaveBeenModified(
                                     ($count = $row['rows']) > 0
                                 );
-                                
+
                                 return $count > 0;
                             }
                         }
@@ -137,7 +137,7 @@ class Connection extends \Illuminate\Database\Connection
             }
 
             $this->recordsHaveBeenModified(false);
-            
+
             return false;
         });
     }
@@ -156,7 +156,7 @@ class Connection extends \Illuminate\Database\Connection
             }
 
             $clientSession = (new HttpConnector())->connect($this->config);
-            
+
             $statement = $this->getStatement($clientSession, $query);
 
             $this->afterPrepare($statement);
@@ -177,13 +177,13 @@ class Connection extends \Illuminate\Database\Connection
                     }
                 }
             }
-            
+
             $this->recordsHaveBeenModified(false);
 
             return false;
         });
     }
-    
+
     protected function prepareQuery(
         ClientSession $clientSession,
         $query,
@@ -198,7 +198,27 @@ class Connection extends \Illuminate\Database\Connection
         if (count($bindings) > 0) {
             $executeQuery .= (' USING ' . implode(', ', $this->prepareBindings($bindings)));
         }
+
         return $this->getStatement($clientSession, $executeQuery);
+    }
+
+    /**
+     * Prepare the query bindings for execution.
+     *
+     * @param  array  $bindings
+     * @return array
+     */
+    public function prepareBindings(array $bindings)
+    {
+        $bindings = parent::prepareBindings($bindings);
+        
+        foreach ($bindings as $key => $value) {
+            if (is_string($value)) {
+                $bindings[$key] = '\'' . $value . '\'';
+            }
+        }
+        
+        return $bindings;
     }
 
     protected function getStatement(ClientSession $clientSession, $query, $useReadPdo = false)
