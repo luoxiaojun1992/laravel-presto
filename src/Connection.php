@@ -30,10 +30,15 @@ class Connection extends \Illuminate\Database\Connection
     {
         //
     }
+    
+    public function disconnect()
+    {
+        //
+    }
 
     public function select($query, $bindings = [], $useReadPdo = true)
     {
-        return $this->run($query, $bindings, function ($query, $bindings) use ($useReadPdo) {
+        return $this->run($query, $bindings, function ($query, $bindings) {
             if ($this->pretending()) {
                 return [];
             }
@@ -42,7 +47,7 @@ class Connection extends \Illuminate\Database\Connection
 
             $prepareName = 'prepared_statement';
 
-            $statement = $this->prepareQuery($clientSession, $query, $prepareName, $bindings, $useReadPdo);
+            $statement = $this->prepareQuery($clientSession, $query, $prepareName, $bindings);
 
             $this->afterPrepare($statement);
 
@@ -64,7 +69,7 @@ class Connection extends \Illuminate\Database\Connection
 
     public function cursor($query, $bindings = [], $useReadPdo = true)
     {
-        return $this->run($query, $bindings, function ($query, $bindings) use ($useReadPdo) {
+        return $this->run($query, $bindings, function ($query, $bindings) {
             if ($this->pretending()) {
                 return [];
             }
@@ -73,7 +78,7 @@ class Connection extends \Illuminate\Database\Connection
 
             $prepareName = 'prepared_statement';
 
-            $statement = $this->prepareQuery($clientSession, $query, $prepareName, $bindings, $useReadPdo);
+            $statement = $this->prepareQuery($clientSession, $query, $prepareName, $bindings);
 
             $this->afterPrepare($statement);
 
@@ -227,8 +232,7 @@ class Connection extends \Illuminate\Database\Connection
         ClientSession $clientSession,
         $query,
         $prepareName,
-        $bindings = [],
-        $useReadPdo = false
+        $bindings = []
     ) {
         $preparedStatement = new PreparedStatement($prepareName, $query);
         $clientSession->setPreparedStatement($preparedStatement);
@@ -260,7 +264,7 @@ class Connection extends \Illuminate\Database\Connection
         return $bindings;
     }
 
-    protected function getStatement(ClientSession $clientSession, $query, $useReadPdo = false)
+    protected function getStatement(ClientSession $clientSession, $query)
     {
         return new StatementClient($clientSession, $query);
     }
