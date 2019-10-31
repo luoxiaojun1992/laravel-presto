@@ -24,7 +24,7 @@ class Grammar extends \Illuminate\Database\Schema\Grammars\Grammar
      */
     public function compileColumnListing()
     {
-        return 'select column_name as `column_name` from information_schema.columns where table_schema = ? and table_name = ?';
+        return 'select column_name as "column_name" from information_schema.columns where table_schema = ? and table_name = ?';
     }
 
     /**
@@ -39,20 +39,5 @@ class Grammar extends \Illuminate\Database\Schema\Grammars\Grammar
         $columns = $this->prefixArray('add', $this->getColumns($blueprint));
 
         return 'alter table '.$this->wrapTable($blueprint).' '.implode(', ', $columns);
-    }
-    
-    /**
-     * Wrap a single string in keyword identifiers.
-     *
-     * @param  string  $value
-     * @return string
-     */
-    protected function wrapValue($value)
-    {
-        if ($value !== '*') {
-            return '"'.str_replace('"', '""', $value).'"';
-        }
-
-        return $value;
     }
 }

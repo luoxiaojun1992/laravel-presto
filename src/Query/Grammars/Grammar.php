@@ -5,17 +5,6 @@ namespace Lxj\Laravel\Presto\Query\Grammars;
 class Grammar extends \Illuminate\Database\Query\Grammars\Grammar
 {
     /**
-     * Wrap a single string in keyword identifiers.
-     *
-     * @param  string  $value
-     * @return string
-     */
-    protected function wrapValue($value)
-    {
-        return $value === '*' ? $value : '"'.str_replace('"', '""', $value).'"';
-    }
-
-    /**
      * Wrap a value in keyword identifiers.
      *
      * @param  \Illuminate\Database\Query\Expression|string  $value

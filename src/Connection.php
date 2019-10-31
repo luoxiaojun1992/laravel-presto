@@ -294,11 +294,4 @@ class Connection extends \Illuminate\Database\Connection
     {
         return $this->withTablePrefix(new SchemaGrammar());
     }
-
-    protected function queryBinding($query, $bindings)
-    {
-        $bindings = $this->prepareBindings($bindings);
-        $query = strtr($query, $bindings);
-        return $query;
-    }
 }
