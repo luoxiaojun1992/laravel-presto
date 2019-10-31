@@ -21,6 +21,16 @@ class Connection extends \Illuminate\Database\Connection
         parent::__construct($pdo, $database, $tablePrefix, $config);
     }
 
+    protected function reconnectIfMissingConnection()
+    {
+        //
+    }
+    
+    public function reconnect()
+    {
+        //
+    }
+
     public function select($query, $bindings = [], $useReadPdo = true)
     {
         return $this->run($query, $bindings, function ($query, $bindings) use ($useReadPdo) {
