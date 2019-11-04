@@ -257,7 +257,7 @@ class Connection extends \Illuminate\Database\Connection
 
         foreach ($bindings as $key => $value) {
             if (is_string($value)) {
-                $bindings[$key] = '\'' . $value . '\'';
+                $bindings[$key] = ('\'' . $value . '\'');
             }
         }
 
