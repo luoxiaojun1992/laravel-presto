@@ -5,6 +5,7 @@ namespace Lxj\Laravel\Presto;
 use Illuminate\Database\Events\StatementPrepared;
 use Lxj\Laravel\Presto\Connectors\HttpConnector;
 use Lxj\Laravel\Presto\Query\Grammars\Grammar as QueryGrammar;
+use Lxj\Laravel\Presto\Query\Processors\Processor;
 use Lxj\Laravel\Presto\Schema\Grammars\Grammar as SchemaGrammar;
 use SebastianBergmann\CodeCoverage\Report\PHP;
 use Ytake\PrestoClient\ClientSession;
@@ -293,5 +294,15 @@ class Connection extends \Illuminate\Database\Connection
     protected function getDefaultSchemaGrammar()
     {
         return $this->withTablePrefix(new SchemaGrammar());
+    }
+
+    /**
+     * Get the default post processor instance.
+     *
+     * @return Processor
+     */
+    protected function getDefaultPostProcessor()
+    {
+        return new Processor();
     }
 }
