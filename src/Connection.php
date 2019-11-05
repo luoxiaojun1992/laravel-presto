@@ -26,12 +26,12 @@ class Connection extends \Illuminate\Database\Connection
     {
         //
     }
-    
+
     public function reconnect()
     {
         //
     }
-    
+
     public function disconnect()
     {
         //
@@ -72,7 +72,7 @@ class Connection extends \Illuminate\Database\Connection
     {
         return $this->run($query, $bindings, function ($query, $bindings) {
             if ($this->pretending()) {
-                return [];
+                return new \ArrayIterator();
             }
 
             $clientSession = (new HttpConnector())->connect($this->config);
@@ -83,16 +83,21 @@ class Connection extends \Illuminate\Database\Connection
 
             $this->afterPrepare($statement);
 
-            $result = [];
+            $emptyResult = true;
             $queryResults = $this->getResultSession($statement)->execute()->yieldResults();
             foreach ($queryResults as $queryResult) {
                 if ($queryResult instanceof QueryResult) {
                     foreach ($queryResult->yieldData() as $row) {
                         if ($row instanceof FixData) {
+                            $emptyResult = false;
                             yield (array)$row;
                         }
                     }
                 }
+            }
+
+            if ($emptyResult) {
+                return new \ArrayIterator();
             }
         });
     }
